@@ -1,0 +1,67 @@
+name: $(date:yyyyMMdd)$(rev:.r).$(SourceBranchName)
+
+trigger:
+- dev
+- master
+
+variables:
+  azureSubscription: 'projectrserviceconnection'
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: CI_Build
+  jobs:
+  - job: Build
+    steps:
+    - task: AzureCLI@2  
+      displayName: 'CI - Build bicep artifact' 
+      inputs: 
+        azureSubscription: $(azureSubscription) 
+        scriptType: 'pscore'  
+        scriptLocation: 'inlineScript'  
+        inlineScript: 'az bicep build --file ./projectr-aks/01-azure-infrastructure/main.bicep'  
+    - task: PublishBuildArtifacts@1 
+      displayName: 'CI - Publish artifact in pipeline' 
+      inputs: 
+        PathtoPublish: '$(Build.SourcesDirectory)/projectr-aks/01-azure-infrastructure/main.json'  
+        ArtifactName: 'finishedTemplate'  
+        publishLocation: 'Container' 
+    - task: CopyFiles@2
+      displayName: 'CI - Copy 02-kubernetes-core to: $(Build.ArtifactStagingDirectory)'
+      inputs:
+        Contents: |
+          $(Build.SourcesDirectory)/projectr-aks/02-kubernetes-core/*.*
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    - task: CopyFiles@2
+      displayName: 'CI - Copy 03-kubernetes-configmap to: $(Build.ArtifactStagingDirectory)'
+      inputs:
+        Contents: |
+          $(Build.SourcesDirectory)/projectr-aks/03-kubernetes-configmap/*.*
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    - task: CopyFiles@2
+      displayName: 'CI - Copy 04-kubernetes-secrets to: $(Build.ArtifactStagingDirectory)'
+      inputs:
+        Contents: |
+          $(Build.SourcesDirectory)/projectr-aks/04-kubernetes-secrets/*.*
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    - task: CopyFiles@2
+      displayName: 'CI - Copy 05-kubernetes-volumes to: $(Build.ArtifactStagingDirectory)'
+      inputs:
+        Contents: |
+          $(Build.SourcesDirectory)/projectr-aks/05-kubernetes-volumes/*.*
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    - task: CopyFiles@2
+      displayName: 'CI - Copy 06-kubernetes-ingress to: $(Build.ArtifactStagingDirectory)'
+      inputs:
+        Contents: |
+          $(Build.SourcesDirectory)/projectr-aks/06-kubernetes-ingress/*.*
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+    - task: PublishBuildArtifacts@1 
+      displayName: 'CI - Publish AKS infrastructure artifacts' 
+      inputs: 
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'infrastructure'  
+        publishLocation: 'Container' 

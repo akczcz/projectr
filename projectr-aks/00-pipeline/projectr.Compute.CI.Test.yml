@@ -1,0 +1,74 @@
+# Variable Group 'projectr.Compute.Dev' was defined in the Variables tab
+trigger:
+- dev
+- master
+- projectr-dev
+
+# Trigger to CI Infrastructure pipeline
+resources:
+  pipelines:
+  - pipeline: projectr.Infrastructure.CI.App
+    source: projectr.Infrastructure.CI.App
+    trigger:
+      branches:
+        include:
+        - refs/heads/master
+        - refs/heads/dev
+        - refs/heads/projectr-dev
+
+# Trigger to Application Repository
+  repositories:
+  - repository: projectr-compute
+    type: git
+    name: projectr/projectr-compute
+    ref: refs/heads/dev
+#    ref: dev
+    trigger:
+#    - dev
+    - refs/heads/dev
+#    - master
+    - refs/heads/master
+
+name: $(date:yyyyMMdd)$(rev:.r)
+
+variables:
+- group: projectr.Compute.Dev
+
+jobs:
+- job: Job_1
+  displayName: Agent job 1
+  pool:
+    vmImage: ubuntu-20.04
+  steps:
+  - checkout: projectr-compute
+  - task: Docker@2
+    displayName: buildAndPush
+    inputs:
+      containerRegistry: 00000000-0000-0000-0000-000000000000
+      repository: $(imageName)
+      Dockerfile: Dockerfile
+      tags: >-
+        $(Build.BuildNumber)
+
+        latest
+
+        $(Build.BuildNumber)-$(Build.SourceBranchName)
+  - task: DownloadBuildArtifacts@0
+    displayName: Download Build Artifacts
+    inputs:
+      buildType: specific
+      project: 84b4c532-26ad-4afc-b41f-9e119dc913a6
+      definition: 30
+      artifactName: infrastructureapp
+      extractTars: false
+  - task: CopyFiles@2
+    displayName: 'Copy Files to: kubernetesdeployment'
+    inputs:
+      SourceFolder: $(System.ArtifactsDirectory)
+      TargetFolder: kubernetesdeployment
+  - task: PublishPipelineArtifact@1
+    displayName: Publish Pipeline Artifact
+    inputs:
+      path: $(Pipeline.Workspace)/a/infrastructureapp
+      artifactName: kubernetesdeployment
+...

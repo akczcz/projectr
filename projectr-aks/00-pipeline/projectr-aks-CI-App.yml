@@ -1,0 +1,35 @@
+name: $(date:yyyyMMdd)$(rev:.r).$(SourceBranchName)
+
+trigger:
+- dev
+- master
+
+variables:
+  azureSubscription: 'projectrserviceconnection'
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: CI_Build
+  jobs:
+  - job: Build
+    steps:
+    - task: CopyFiles@2
+      displayName: 'CI - Copy 07-kubernetes-app to: $(Build.ArtifactStagingDirectory)'
+      inputs:
+        Contents: |
+          $(Build.SourcesDirectory)/projectr-aks/07-kubernetes-app/*.*
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    - task: CopyFiles@2
+      displayName: 'CI - Copy 08-kubernetes-app-jobs to: $(Build.ArtifactStagingDirectory)'
+      inputs:
+        Contents: |
+          $(Build.SourcesDirectory)/projectr-aks/08-kubernetes-app-jobs/*.*
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    - task: PublishBuildArtifacts@1 
+      displayName: 'CI - Publish AKS app deployment infrastructure artifacts' 
+      inputs: 
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'infrastructureapp'  
+        publishLocation: 'Container' 
